@@ -19,7 +19,7 @@ const Footer = () => {
                   </span>
                 </Link>
                 <p className="dark:text-body-color-dark mb-9 text-base leading-relaxed text-body-color text-justify">
-                  Premium nature's gifts – health and wellness in every step.
+                  Premium nature&apos;s gifts – health and wellness in every step.
                   Experience the purest products sourced directly from the heart of nature.
                 </p>
               </div>
