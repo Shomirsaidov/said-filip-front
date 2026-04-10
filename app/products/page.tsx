@@ -5,11 +5,14 @@ import api from "@/utils/api";
 import { Product } from "@/types/product";
 import ProductCard from "@/components/Products/ProductCard";
 import Breadcrumb from "@/components/Common/Breadcrumb";
+import { useAppDispatch } from "@/redux/store";
+import { addToCart } from "@/redux/slices/cartSlice";
 
 const ProductsPage = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const dispatch = useAppDispatch();
 
     // Filter states
     const [filters, setFilters] = useState({
@@ -53,16 +56,7 @@ const ProductsPage = () => {
     };
 
     const handleAddToCart = async (productId: number) => {
-        try {
-            await api.post("/cart/items", { productId, quantity: 1 });
-            alert("Product added to cart!");
-        } catch (err: any) {
-            if (err.response?.status === 401) {
-                alert("Please sign in to add items to your cart.");
-            } else {
-                alert("Failed to add product to cart.");
-            }
-        }
+        dispatch(addToCart(productId));
     };
 
     return (

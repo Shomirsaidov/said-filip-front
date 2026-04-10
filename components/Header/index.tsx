@@ -6,13 +6,19 @@ import { useEffect, useState } from "react";
 import ThemeToggler from "./ThemeToggler";
 import menuData from "./menuData";
 
+import { useAppDispatch, useAppSelector } from "@/redux/store";
+import { logout } from "@/redux/slices/authSlice";
+import { fetchCart } from "@/redux/slices/cartSlice";
+
 const Header = () => {
   const [navbarOpen, setNavbarOpen] = useState(false);
   const [sticky, setSticky] = useState(false);
   const [openIndex, setOpenIndex] = useState(-1);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, role } = useAppSelector((state) => state.auth);
+  const { items } = useAppSelector((state) => state.cart);
   const pathname = usePathname();
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const handleStickyNavbar = () => {
     setSticky(window.scrollY >= 80);
@@ -20,14 +26,14 @@ const Header = () => {
 
   useEffect(() => {
     window.addEventListener("scroll", handleStickyNavbar);
-    // Check login status
-    setIsLoggedIn(!!localStorage.getItem("token"));
+    if (isLoggedIn) {
+      dispatch(fetchCart());
+    }
     return () => window.removeEventListener("scroll", handleStickyNavbar);
-  }, []);
+  }, [isLoggedIn, dispatch]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    setIsLoggedIn(false);
+    dispatch(logout());
     router.push("/signin");
   };
 
@@ -104,7 +110,7 @@ const Header = () => {
             <div className="flex items-center justify-end pr-16 lg:pr-0">
               {isLoggedIn ? (
                 <>
-                  {localStorage.getItem("role") === "ADMIN" && (
+                  {role === "ADMIN" && (
                     <Link
                       href="/admin/products"
                       className="hidden text-base font-medium text-dark hover:text-primary dark:text-white md:block mr-6"
@@ -116,6 +122,11 @@ const Header = () => {
                     <span className="text-dark dark:text-white hover:text-primary duration-300">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>
                     </span>
+                    {items.length > 0 && (
+                      <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white font-bold">
+                        {items.reduce((sum, item) => sum + item.quantity, 0)}
+                      </span>
+                    )}
                   </Link>
                   <button onClick={handleLogout} className="text-base font-medium text-dark hover:text-primary dark:text-white md:block mr-4">
                     Logout

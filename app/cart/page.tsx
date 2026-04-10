@@ -1,52 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import api from "@/utils/api";
+import { useEffect } from "react";
 import Breadcrumb from "@/components/Common/Breadcrumb";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/redux/store";
+import { fetchCart } from "@/redux/slices/cartSlice";
+import api from "@/utils/api";
 
 const CartPage = () => {
-    const [cart, setCart] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const router = useRouter();
-
-    const fetchCart = async () => {
-        try {
-            const response = await api.get("/cart");
-            setCart(response.data);
-        } catch (err: any) {
-            if (err.response?.status === 401) {
-                setError("Please sign in to view your cart.");
-            } else {
-                setError("Failed to fetch cart. Please try again later.");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    const dispatch = useAppDispatch();
+    const { items, totalPrice, loading, error } = useAppSelector((state) => state.cart);
 
     useEffect(() => {
-        fetchCart();
-    }, []);
+        dispatch(fetchCart());
+    }, [dispatch]);
 
-    const handleUpdateQuantity = async (itemId: number, quantity: number) => {
-        if (quantity < 1) return;
+    const handleUpdateQuantity = async (itemId: number, newQuantity: number) => {
+        if (newQuantity < 1) return;
         try {
-            await api.patch(`/cart/items/${itemId}`, { quantity });
-            fetchCart();
-        } catch (err) {
-            alert("Failed to update quantity.");
+            await api.patch(`/cart/items/${itemId}`, { quantity: newQuantity });
+            dispatch(fetchCart());
+        } catch (err: any) {
+            alert("Failed to update quantity");
         }
     };
 
     const handleRemoveItem = async (itemId: number) => {
         try {
             await api.delete(`/cart/items/${itemId}`);
-            fetchCart();
-        } catch (err) {
-            alert("Failed to remove item.");
+            dispatch(fetchCart());
+        } catch (err: any) {
+            alert("Failed to remove item");
         }
     };
 
@@ -54,13 +38,13 @@ const CartPage = () => {
         try {
             await api.post("/orders");
             alert("Order placed successfully!");
-            router.push("/orders");
-        } catch (err) {
-            alert("Failed to place order.");
+            dispatch(fetchCart());
+        } catch (err: any) {
+            alert("Failed to place order");
         }
     };
 
-    if (loading) return <div className="py-24 text-center">Loading cart...</div>;
+    if (loading && items.length === 0) return <div className="py-24 text-center">Loading cart...</div>;
 
     return (
         <>
@@ -68,55 +52,59 @@ const CartPage = () => {
 
             <section className="pb-[120px] pt-[120px]">
                 <div className="container">
-                    {error ? (
-                        <div className="text-center">
-                            <p className="mb-6 text-xl text-red-500">{error}</p>
-                            <Link href="/signin" className="rounded-sm bg-primary px-8 py-3 text-white">Sign In</Link>
-                        </div>
-                    ) : !cart || cart.items.length === 0 ? (
+                    {items.length === 0 ? (
                         <div className="text-center">
                             <p className="mb-6 text-xl">Your cart is empty.</p>
-                            <Link href="/products" className="rounded-sm bg-primary px-8 py-3 text-white">Go Shopping</Link>
+                            <Link href="/products" className="rounded-sm bg-primary px-8 py-3 text-white">Start Shopping</Link>
                         </div>
                     ) : (
                         <div className="mx-auto max-w-[800px]">
-                            <div className="mb-8 rounded-sm bg-white p-8 shadow-two dark:bg-dark">
-                                {cart.items.map((item: any) => (
-                                    <div key={item.id} className="mb-6 flex items-center justify-between border-b border-stroke pb-6 dark:border-stroke-dark last:border-0 last:mb-0 last:pb-0">
-                                        <div className="flex items-center">
-                                            <div className="mr-4 h-20 w-20 overflow-hidden rounded bg-gray-100">
-                                                {/* Placeholder or real image */}
-                                            </div>
+                            <div className="grid gap-8">
+                                {items.map((item) => (
+                                    <div key={item.id} className="flex items-center justify-between border-b border-stroke pb-6 dark:border-stroke-dark">
+                                        <div className="flex items-center gap-4">
                                             <div>
                                                 <h4 className="text-lg font-bold text-black dark:text-white">{item.product.name}</h4>
-                                                <p className="text-sm text-body-color">${item.product.price} each</p>
+                                                <p className="text-sm text-body-color">${item.product.price.toFixed(2)} each</p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-4">
-                                            <div className="flex items-center border border-stroke rounded dark:border-stroke-dark">
-                                                <button onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} className="px-3 py-1">-</button>
-                                                <span className="px-3">{item.quantity}</span>
-                                                <button onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} className="px-3 py-1">+</button>
+                                        <div className="flex items-center gap-6">
+                                            <div className="flex items-center border border-stroke dark:border-stroke-dark rounded">
+                                                <button
+                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                                    className="px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="px-3 py-1 border-x border-stroke dark:border-stroke-dark">{item.quantity}</span>
+                                                <button
+                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                                    className="px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                >
+                                                    +
+                                                </button>
                                             </div>
-                                            <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700">Remove</button>
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id)}
+                                                className="text-red-500 hover:text-red-700"
+                                            >
+                                                Remove
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
-                            </div>
 
-                            <div className="flex items-center justify-between rounded-sm bg-white p-8 shadow-two dark:bg-dark">
-                                <div>
-                                    <p className="text-lg font-medium text-body-color">Total Price</p>
-                                    <h3 className="text-2xl font-bold text-black dark:text-white">
-                                        ${cart.items.reduce((acc: number, item: any) => acc + item.product.price * item.quantity, 0).toFixed(2)}
-                                    </h3>
+                                <div className="mt-8 flex items-center justify-between rounded-sm bg-white p-8 shadow-two dark:bg-dark border border-stroke dark:border-stroke-dark">
+                                    <div>
+                                        <h4 className="text-xl font-bold text-black dark:text-white">Total: ${totalPrice.toFixed(2)}</h4>
+                                    </div>
+                                    <button
+                                        onClick={handlePlaceOrder}
+                                        className="rounded-sm bg-primary px-8 py-4 text-white font-bold hover:bg-primary/90 transition-all"
+                                    >
+                                        Place Order
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handlePlaceOrder}
-                                    className="rounded-sm bg-primary px-10 py-4 text-white font-bold hover:bg-primary/90 duration-300"
-                                >
-                                    Place Order
-                                </button>
                             </div>
                         </div>
                     )}
